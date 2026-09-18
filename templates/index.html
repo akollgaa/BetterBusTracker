@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bus Arrivals</title>
+<style>
+  :root {
+    --bg: #0b0d0a;
+    --panel: #12150f;
+    --amber: #ffb100;
+    --amber-dim: #7a5800;
+    --green: #35d07f;
+    --yellow: #e8c547;
+    --red: #ff5a5a;
+    --grid-line: #232a1e;
+    --text-dim: #6b7362;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--amber);
+    font-family: 'Courier New', 'DejaVu Sans Mono', monospace;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+  .board-header {
+    max-width: 900px;
+    margin: 0 auto 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--grid-line);
+    padding-bottom: 12px;
+  }
+  .board-header h1 {
+    font-size: 1.4rem;
+    letter-spacing: 3px;
+    margin: 0;
+  }
+  .board-header .clock {
+    font-size: 1.1rem;
+    color: var(--text-dim);
+  }
+  #board {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--grid-line);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 100px 1fr 130px 120px;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--grid-line);
+    font-size: 1.15rem;
+  }
+  .row:last-child { border-bottom: none; }
+  .col-label {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .row.head {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    padding: 8px 18px;
+  }
+  .route-id { font-weight: bold; }
+  .capacity-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 1px solid currentColor;
+    font-size: 0.85rem;
+  }
+  .capacity-empty { color: var(--green); }
+  .capacity-half   { color: var(--yellow); }
+  .capacity-full   { color: var(--red); }
+  .capacity-unknown{ color: var(--text-dim); }
+  .eta {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.3rem;
+    letter-spacing: 1px;
+  }
+  .eta.due { color: var(--red); animation: blink 1s step-start infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+  #empty-msg {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 0;
+    display: none;
+  }
+  @media (max-width: 600px) {
+    .row { grid-template-columns: 70px 1fr 100px 90px; padding: 12px 10px; font-size: 0.95rem; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="board-header">
+    <h1>BUS ARRIVALS</h1>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+
+  <div id="board">
+    <div class="row head">
+      <div>ROUTE</div>
+      <div>&nbsp;</div>
+      <div>CAPACITY</div>
+      <div>ARRIVING</div>
+    </div>
+    <div id="rows"></div>
+  </div>
+  <div id="empty-msg">No buses currently tracked</div>
+
+<script>
+  // ---- CONFIG: adjust to match your flask-sock route ----
+  const WS_PATH = "/ws";
+
+  const rowsEl = document.getElementById("rows");
+  const emptyMsg = document.getElementById("empty-msg");
+
+  // busId -> { route_id, capacity, totalSeconds }
+  const buses = new Map();
+
+  function busKey(b) {
+    return b.id !== undefined ? String(b.id) : b.route_id + "-" + Math.random();
+  }
+
+  // Normalizes loosely — handles "EMPTY", "HALF_EMPTY", "FULL", "half", etc.
+  function normalizeCapacity(cap) {
+    const c = (cap || "").toLowerCase();
+    if (c.includes("empty") && !c.includes("half")) return "empty";
+    if (c.includes("half")) return "half";
+    if (c.includes("full")) return "full";
+    return "unknown";
+  }
+
+  function capacityClass(cap) {
+    return "capacity-" + normalizeCapacity(cap);
+  }
+
+  function formatETA(totalSeconds) {
+    if (totalSeconds <= 0) return "DUE";
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  function render() {
+    if (buses.size === 0) {
+      rowsEl.innerHTML = "";
+      emptyMsg.style.display = "block";
+      return;
+    }
+    emptyMsg.style.display = "none";
+
+    const sorted = [...buses.entries()].sort((a, b) => a[1].totalSeconds - b[1].totalSeconds);
+
+    rowsEl.innerHTML = sorted.map(([key, bus]) => `
+      <div class="row" data-key="${key}">
+        <div class="route-id">${bus.route_id}</div>
+        <div></div>
+        <div><span class="capacity-badge ${capacityClass(bus.capacity)}">${normalizeCapacity(bus.capacity).toUpperCase()}</span></div>
+        <div class="eta ${bus.totalSeconds <= 0 ? "due" : ""}">${formatETA(bus.totalSeconds)}</div>
+      </div>
+    `).join("");
+  }
+
+  // Apply a fresh snapshot pushed from the server
+  function applyServerUpdate(data) {
+    const seen = new Set();
+    data.forEach(b => {
+      const key = busKey(b);
+      seen.add(key);
+      buses.set(key, {
+        route_id: b.route_id,
+        capacity: b.capacity,
+        // accepts either minutes/seconds or minute/second key names
+        totalSeconds: (b.minutes ?? b.minute ?? 0) * 60 + (b.seconds ?? b.second ?? 0)
+      });
+    });
+    // remove buses no longer present in the update
+    [...buses.keys()].forEach(k => { if (!seen.has(k)) buses.delete(k); });
+    render();
+  }
+
+  // Local 1-second tick between server pushes
+  setInterval(() => {
+    buses.forEach(bus => {
+      if (bus.totalSeconds > 0) bus.totalSeconds -= 1;
+    });
+    render();
+  }, 1000);
+
+  // Wall clock
+  function tickClock() {
+    document.getElementById("clock").textContent = new Date().toLocaleTimeString();
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // ---- WebSocket (flask-sock is a raw WebSocket, not Socket.IO) ----
+  function connect() {
+    const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${protocol}//${location.host}${WS_PATH}`);
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data); // expects: [{id, route_id, capacity, minutes, seconds}, ...]
+        applyServerUpdate(data);
+      } catch (e) {
+        console.error("Bad message from server:", e);
+      }
+    };
+
+    ws.onopen = () => {
+      ws.send("ping"); // kick off the first push — your server loop is receive-gated
+      // your loop only pushes after receiving something, so we ping it
+      // every 30s to drive the periodic refresh
+      ws._pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) ws.send("ping");
+      }, 30000);
+    };
+
+    ws.onclose = () => {
+      clearInterval(ws._pingInterval);
+      setTimeout(connect, 2000); // auto-reconnect
+    };
+    ws.onerror = () => ws.close();
+  }
+  connect();
+</script>
+</body>
+</html>

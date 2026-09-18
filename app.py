@@ -22,8 +22,9 @@ def tracker(ws):
     api_key = "VtuM7TzcpsY8t6XMyAsPzcmAY"
     prt = PRT_API.PRT_API(api_key)
     while True:
-        if(ws.receive()):
-            result = prt.get_pred("7097")
+        stop_id = ws.receive()
+        if(stop_id is not None):
+            result = prt.get_pred(int(stop_id))
             json_return = []
             for bus in result:
                 dt = datetime.strptime(bus['prdtm'], "%Y%m%d %H:%M:%S")

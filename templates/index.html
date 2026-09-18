@@ -17,45 +17,94 @@
     --text-dim: #6b7362;
   }
   * { box-sizing: border-box; }
-  body {
+  html, body {
     margin: 0;
+    height: 100%;
     background: var(--bg);
     color: var(--amber);
     font-family: 'Courier New', 'DejaVu Sans Mono', monospace;
-    min-height: 100vh;
-    padding: 24px 16px 48px;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
   }
   .board-header {
-    max-width: 900px;
-    margin: 0 auto 18px;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    border-bottom: 2px solid var(--grid-line);
-    padding-bottom: 12px;
+    border-bottom: 3px solid var(--grid-line);
+    padding: 16px 32px;
+    flex: 0 0 auto;
   }
   .board-header h1 {
-    font-size: 1.4rem;
-    letter-spacing: 3px;
+    font-size: 2.2rem;
+    letter-spacing: 5px;
     margin: 0;
   }
   .board-header .clock {
-    font-size: 1.1rem;
+    font-size: 1.6rem;
     color: var(--text-dim);
   }
-  #board {
-    max-width: 900px;
-    margin: 0 auto;
-    background: var(--panel);
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .stop-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+  .stop-control label {
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  .stop-control input {
+    background: var(--bg);
     border: 1px solid var(--grid-line);
+    color: var(--amber);
+    font-family: inherit;
+    font-size: 1.1rem;
+    width: 90px;
+    padding: 4px 8px;
+    letter-spacing: 1px;
+  }
+  .stop-control input:focus {
+    outline: none;
+    border-color: var(--amber);
+  }
+  .stop-control button {
+    background: transparent;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    font-family: inherit;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  .stop-control button:hover {
+    background: var(--amber);
+    color: var(--bg);
+  }
+  #board {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    overflow-y: auto;
   }
   .row {
     display: grid;
-    grid-template-columns: 100px 1fr 130px 120px;
+    grid-template-columns: 180px 1fr 260px 220px;
     align-items: center;
-    padding: 14px 18px;
+    padding: 28px 40px;
     border-bottom: 1px solid var(--grid-line);
-    font-size: 1.15rem;
+    font-size: 2.9rem;
+    flex: 1 0 20%;
   }
   .row:last-child { border-bottom: none; }
   .col-label {
@@ -66,17 +115,18 @@
     margin-bottom: 2px;
   }
   .row.head {
-    font-size: 0.65rem;
-    letter-spacing: 2px;
+    font-size: 1rem;
+    letter-spacing: 3px;
     color: var(--text-dim);
-    padding: 8px 18px;
+    padding: 10px 40px;
+    flex: 0 0 auto;
   }
-  .route-id { font-weight: bold; }
+  .route-id { font-weight: bold; font-size: 3.4rem; }
   .capacity-badge {
     display: inline-block;
-    padding: 3px 10px;
-    border: 1px solid currentColor;
-    font-size: 0.85rem;
+    padding: 8px 22px;
+    border: 2px solid currentColor;
+    font-size: 1.9rem;
   }
   .capacity-empty { color: var(--green); }
   .capacity-half   { color: var(--yellow); }
@@ -84,8 +134,9 @@
   .capacity-unknown{ color: var(--text-dim); }
   .eta {
     font-variant-numeric: tabular-nums;
-    font-size: 1.3rem;
+    font-size: 3.6rem;
     letter-spacing: 1px;
+    text-align: right;
   }
   .eta.due { color: var(--red); animation: blink 1s step-start infinite; }
   @keyframes blink { 50% { opacity: 0.3; } }
@@ -94,9 +145,17 @@
     color: var(--text-dim);
     padding: 40px 0;
     display: none;
+    font-size: 1.5rem;
   }
-  @media (max-width: 600px) {
-    .row { grid-template-columns: 70px 1fr 100px 90px; padding: 12px 10px; font-size: 0.95rem; }
+  @media (max-width: 700px) {
+    .row { grid-template-columns: 90px 0 1fr 1fr; padding: 0 16px; font-size: 1.4rem; }
+    .row.head { display: none; }
+    .route-id { font-size: 1.6rem; }
+    .capacity-badge { font-size: 1rem; padding: 4px 10px; }
+    .eta { font-size: 1.8rem; }
+    .board-header { padding: 12px 16px; }
+    .board-header h1 { font-size: 1.4rem; letter-spacing: 2px; }
+    .board-header .clock { font-size: 1rem; }
   }
 </style>
 </head>
@@ -104,7 +163,14 @@
 
   <div class="board-header">
     <h1>BUS ARRIVALS</h1>
-    <div class="clock" id="clock">--:--:--</div>
+    <div class="header-right">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="stop-control">
+        <label for="stopId">STOP</label>
+        <input type="text" id="stopId" value="7097" inputmode="numeric" autocomplete="off">
+        <button id="updateBtn">UPDATE</button>
+      </div>
+    </div>
   </div>
 
   <div id="board">
@@ -206,11 +272,22 @@
   setInterval(tickClock, 1000);
 
   // ---- WebSocket (flask-sock is a raw WebSocket, not Socket.IO) ----
+  const stopIdInput = document.getElementById("stopId");
+  const updateBtn = document.getElementById("updateBtn");
+  let socket = null;
+
+  function sendStopId() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      const stopId = stopIdInput.value.trim();
+      if (stopId) socket.send(stopId);
+    }
+  }
+
   function connect() {
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${location.host}${WS_PATH}`);
+    socket = new WebSocket(`${protocol}//${location.host}${WS_PATH}`);
 
-    ws.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data); // expects: [{id, route_id, capacity, minutes, seconds}, ...]
         applyServerUpdate(data);
@@ -219,22 +296,25 @@
       }
     };
 
-    ws.onopen = () => {
-      ws.send("ping"); // kick off the first push — your server loop is receive-gated
-      // your loop only pushes after receiving something, so we ping it
-      // every 30s to drive the periodic refresh
-      ws._pingInterval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) ws.send("ping");
-      }, 30000);
+    socket.onopen = () => {
+      sendStopId(); // kick off the first push — your server loop is receive-gated
+      // your loop only pushes after receiving something, so we send
+      // the current stop id every 30s to drive the periodic refresh
+      socket._pingInterval = setInterval(sendStopId, 30000);
     };
 
-    ws.onclose = () => {
-      clearInterval(ws._pingInterval);
+    socket.onclose = () => {
+      clearInterval(socket._pingInterval);
       setTimeout(connect, 2000); // auto-reconnect
     };
-    ws.onerror = () => ws.close();
+    socket.onerror = () => socket.close();
   }
   connect();
+
+  updateBtn.addEventListener("click", sendStopId);
+  stopIdInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendStopId();
+  });
 </script>
 </body>
 </html>

@@ -40,8 +40,7 @@ def tracker(ws):
             ws.send(json.dumps(json_return))
 
 def main():
-    #app.run(debug=True, host='0.0.0.0', port=5000)
-    pass
+    app.run(debug=True, host='0.0.0.0', port=5000)
 
 if __name__ == "__main__":
     main()

@@ -23,7 +23,7 @@ def tracker(ws):
     prt = PRT_API.PRT_API(api_key)
     while True:
         stop_id = ws.receive()
-        if(stop_id is not None):
+        if(stop_id is not None and stop_id.isdigit()):
             result = prt.get_pred(int(stop_id))
             json_return = []
             for bus in result:
@@ -40,7 +40,8 @@ def tracker(ws):
             ws.send(json.dumps(json_return))
 
 def main():
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    #app.run(debug=True, host='0.0.0.0', port=5000)
+    pass
 
 if __name__ == "__main__":
     main()

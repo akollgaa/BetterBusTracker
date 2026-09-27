@@ -20,23 +20,30 @@ def home():
 @sock.route("/ws")
 def tracker(ws):
     api_key = "VtuM7TzcpsY8t6XMyAsPzcmAY"
+    json_return = []
     prt = PRT_API.PRT_API(api_key)
     while True:
         stop_id = ws.receive()
-        if(stop_id is not None and stop_id.isdigit()):
+        # Don't track buses if there are none running between 2am and 5am
+        if datetime.now().hour >= 2 and datetime.now().hour < 5:
+            json_return.append([{"valid": False}])
+            ws.send(json.dumps(json_return))
+        elif(stop_id is not None and stop_id.isdigit()):
             result = prt.get_pred(int(stop_id))
-            json_return = []
             for bus in result:
                 dt = datetime.strptime(bus['prdtm'], "%Y%m%d %H:%M:%S")
                 ct = datetime.now()
                 time_diff = dt - ct
                 total_seconds = max(0, int(time_diff.total_seconds()))
                 minute, second = divmod(total_seconds, 60)
+                arrival_tm = datetime.strptime(bus['prdtm'], "%I%M %p")
                 json_return.append({"id": bus['id'], 
                                     "route_id": bus['rt'], 
                                     "minute": minute, 
                                     "second": second,
-                                    "capacity": bus['psgld']})
+                                    "capacity": bus['psgld'],
+                                    "arrival_tm": arrival_tm,
+                                    "valid": True})
             ws.send(json.dumps(json_return))
 
 def main():

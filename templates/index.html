@@ -234,7 +234,7 @@
         <div></div>
         <div><span class="capacity-badge ${capacityClass(bus.capacity)}">${normalizeCapacity(bus.capacity).toUpperCase()}</span></div>
         <div class="eta ${bus.totalSeconds <= 0 ? "due" : ""}">${formatETA(bus.totalSeconds)}</div>
-      </div>
+        </div>
     `).join("");
   }
 
@@ -247,6 +247,7 @@
       buses.set(key, {
         route_id: b.route_id,
         capacity: b.capacity,
+        arrival_tm: b.arrival_tm,
         // accepts either minutes/seconds or minute/second key names
         totalSeconds: (b.minutes ?? b.minute ?? 0) * 60 + (b.seconds ?? b.second ?? 0)
       });
@@ -289,8 +290,12 @@
 
     socket.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data); // expects: [{id, route_id, capacity, minutes, seconds}, ...]
-        applyServerUpdate(data);
+        const data = JSON.parse(event.data); // expects: [{id, route_id, capacity, minutes, seconds, arrival_tm, valid}, ...]
+        if (data[0].valid) {
+          applyServerUpdate(data);
+        } else {
+          buses.clear();
+        }
       } catch (e) {
         console.error("Bad message from server:", e);
       }

@@ -39,4 +39,5 @@ class PRT_API:
         print(link)
         result = requests.get(link)
         result.raise_for_status()
+        print(result.json())
         return self.parse_pred(result.json())

@@ -20,9 +20,9 @@ def home():
 @sock.route("/ws")
 def tracker(ws):
     api_key = "VtuM7TzcpsY8t6XMyAsPzcmAY"
-    json_return = []
     prt = PRT_API.PRT_API(api_key)
     while True:
+        json_return = []
         stop_id = ws.receive()
         # Don't track buses if there are none running between 2am and 5am
         if datetime.now().hour >= 2 and datetime.now().hour < 5:

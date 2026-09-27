@@ -36,13 +36,13 @@ def tracker(ws):
                 time_diff = dt - ct
                 total_seconds = max(0, int(time_diff.total_seconds()))
                 minute, second = divmod(total_seconds, 60)
-                arrival_tm = datetime.strptime(bus['prdtm'], "%I%M %p")
+                arrival_tm = datetime.strptime(bus['prdtm'], "%Y%m%d %H:%M:%S")
                 json_return.append({"id": bus['id'], 
                                     "route_id": bus['rt'], 
                                     "minute": minute, 
                                     "second": second,
                                     "capacity": bus['psgld'],
-                                    "arrival_tm": arrival_tm,
+                                    "arrival_tm": arrival_tm.strftime("%I:%M %p"),
                                     "valid": True})
             ws.send(json.dumps(json_return))
 

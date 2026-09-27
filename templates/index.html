@@ -99,7 +99,7 @@
   }
   .row {
     display: grid;
-    grid-template-columns: 180px 1fr 260px 220px;
+    grid-template-columns: 180px 1fr 260px 200px 220px;
     align-items: center;
     padding: 28px 40px;
     border-bottom: 1px solid var(--grid-line);
@@ -132,11 +132,17 @@
   .capacity-half   { color: var(--yellow); }
   .capacity-full   { color: var(--red); }
   .capacity-unknown{ color: var(--text-dim); }
+  .arrival-time {
+    font-variant-numeric: tabular-nums;
+    font-size: 2rem;
+    color: var(--text-dim);
+    text-align: left;
+  }
   .eta {
     font-variant-numeric: tabular-nums;
     font-size: 3.6rem;
     letter-spacing: 1px;
-    text-align: right;
+    text-align: left;
   }
   .eta.due { color: var(--red); animation: blink 1s step-start infinite; }
   @keyframes blink { 50% { opacity: 0.3; } }
@@ -148,7 +154,8 @@
     font-size: 1.5rem;
   }
   @media (max-width: 700px) {
-    .row { grid-template-columns: 90px 0 1fr 1fr; padding: 0 16px; font-size: 1.4rem; }
+    .row { grid-template-columns: 90px 0 1fr 1fr 1fr; padding: 0 16px; font-size: 1.4rem; }
+    .arrival-time { font-size: 1.1rem; }
     .row.head { display: none; }
     .route-id { font-size: 1.6rem; }
     .capacity-badge { font-size: 1rem; padding: 4px 10px; }
@@ -178,6 +185,7 @@
       <div>ROUTE</div>
       <div>&nbsp;</div>
       <div>CAPACITY</div>
+      <div>ARRIVES AT</div>
       <div>ARRIVING</div>
     </div>
     <div id="rows"></div>
@@ -211,6 +219,17 @@
     return "capacity-" + normalizeCapacity(cap);
   }
 
+  // arrival_tm arrives as "%I%M %p" e.g. "0130 PM" -> render as "1:30 pm"
+  function formatArrivalTime(tm) {
+    if (!tm) return "--:--";
+    const match = String(tm).trim().match(/^(\d{2})(\d{2})\s*(AM|PM)$/i);
+    if (!match) return String(tm);
+    const hour = parseInt(match[1], 10); // drop leading zero
+    const minute = match[2];
+    const period = match[3].toLowerCase();
+    return `${hour}:${minute} ${period}`;
+  }
+
   function formatETA(totalSeconds) {
     if (totalSeconds <= 0) return "DUE";
     const m = Math.floor(totalSeconds / 60);
@@ -233,6 +252,7 @@
         <div class="route-id">${bus.route_id}</div>
         <div></div>
         <div><span class="capacity-badge ${capacityClass(bus.capacity)}">${normalizeCapacity(bus.capacity).toUpperCase()}</span></div>
+        <div class="arrival-time">${formatArrivalTime(bus.arrival_tm)}</div>
         <div class="eta ${bus.totalSeconds <= 0 ? "due" : ""}">${formatETA(bus.totalSeconds)}</div>
         </div>
     `).join("");

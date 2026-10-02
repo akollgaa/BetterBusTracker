@@ -153,7 +153,27 @@
     display: none;
     font-size: 1.5rem;
   }
+  /* Scheduled (non-predicted) buses: dashed edge marker, "SCHEDULED" tag, italic dimmed ETA */
+  .row.scheduled { position: relative; }
+  .row.scheduled::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 14%; bottom: 14%;
+    width: 5px;
+    background: repeating-linear-gradient(to bottom, var(--amber-dim) 0 10px, transparent 10px 18px);
+  }
+  .sched-tag {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: normal;
+    letter-spacing: 3px;
+    color: var(--amber-dim);
+    margin-top: 2px;
+  }
+  .row.scheduled .eta:not(.due) { font-style: italic; opacity: 0.7; }
+  .row.scheduled .arrival-time { font-style: italic; }
   @media (max-width: 700px) {
+    .sched-tag { font-size: 0.6rem; letter-spacing: 1px; }
     .row { grid-template-columns: 90px 0 1fr 1fr 1fr; padding: 0 16px; font-size: 1.4rem; }
     .arrival-time { font-size: 1.1rem; }
     .row.head { display: none; }
@@ -248,8 +268,8 @@
     const sorted = [...buses.entries()].sort((a, b) => a[1].totalSeconds - b[1].totalSeconds);
 
     rowsEl.innerHTML = sorted.map(([key, bus]) => `
-      <div class="row" data-key="${key}">
-        <div class="route-id">${bus.route_id}</div>
+      <div class="row${bus.prt === false ? " scheduled" : ""}" data-key="${key}">
+        <div class="route-id">${bus.route_id}${bus.prt === false ? '<span class="sched-tag">SCHEDULED</span>' : ""}</div>
         <div></div>
         <div><span class="capacity-badge ${capacityClass(bus.capacity)}">${normalizeCapacity(bus.capacity).toUpperCase()}</span></div>
         <div class="arrival-time">${formatArrivalTime(bus.arrival_tm)}</div>
@@ -268,6 +288,7 @@
         route_id: b.route_id,
         capacity: b.capacity,
         arrival_tm: b.arrival_tm,
+        prt: b.prt,
         // accepts either minutes/seconds or minute/second key names
         totalSeconds: (b.minutes ?? b.minute ?? 0) * 60 + (b.seconds ?? b.second ?? 0)
       });

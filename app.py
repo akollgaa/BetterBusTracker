@@ -31,18 +31,18 @@ def tracker(ws):
         elif(stop_id is not None and stop_id.isdigit()):
             result = prt.get_pred(int(stop_id))
             for bus in result:
-                dt = datetime.strptime(bus['prdtm'], "%Y%m%d %H:%M:%S")
+                arrival_tm = datetime.strptime(bus['prdtm'], "%Y%m%d %H:%M:%S")
                 ct = datetime.now()
-                time_diff = dt - ct
+                time_diff = arrival_tm - ct
                 total_seconds = max(0, int(time_diff.total_seconds()))
                 minute, second = divmod(total_seconds, 60)
-                arrival_tm = datetime.strptime(bus['prdtm'], "%Y%m%d %H:%M:%S")
                 json_return.append({"id": bus['id'], 
                                     "route_id": bus['rt'], 
                                     "minute": minute, 
                                     "second": second,
                                     "capacity": bus['psgld'],
                                     "arrival_tm": arrival_tm.strftime("%I:%M %p"),
+                                    "prt": bus['prt'],
                                     "valid": True})
             ws.send(json.dumps(json_return))
 
